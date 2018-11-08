@@ -11,12 +11,10 @@ import time
 import math
 import named_tup
 from SQL_querier import SQL_querier
-import json
 from AS_Graph import AS_Graph
 from AS import AS
 from Announcement import Announcement
 from progress_bar import progress_bar
-from collections import deque
 
 class extrapolator:
     def __init__(self):

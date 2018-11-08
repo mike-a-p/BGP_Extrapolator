@@ -1,5 +1,3 @@
-import uuid
-import psycopg2
 from named_tup import Announcement_tup
 from Announcement import Announcement
 
@@ -139,45 +137,25 @@ class AS:
 
         """
         data = list()
-        psycopg2.extras.register_uuid()
 
-        #TODO iterate through all announcements between two dictionaries
-        #without repeating code
         for ann in self.all_anns:
             ann = self.all_anns[ann]
             
             #path_len an rec_from are given 3 digits each
             #padding ensures e.g. '33' + '0' is not mistaken for '3' + '30"
-            path_len = str(ann.as_path_length).zfill(3)
-            if(ann.received_from is None):
-               rec_from = str(3).zfill(3) 
-            else:
-               rec_from = str(ann.received_from).zfill(3)
-            # '-' serves similar purpose to padding, seperating parts
-            po = (str(ann.prefix) + '-' + str(ann.origin))
-            po = uuid.uuid3(uuid.NAMESPACE_DNS,po)
-            path_len_rec_from = int(path_len + rec_from)
-            #Named Tuples are adaptable to Postgres composite types
-            ann_tup = Announcement_tup(*(po,path_len_rec_from))
-            data.append(ann_tup)
-        for ann in self.anns_from_peers_providers:
-            ann = self.anns_from_peers_providers[ann]
-            
-            #path_len an rec_from are given 3 digits each
-            #padding ensures e.g. '33' + '0' is not mistaken for '3' + '30"
-            path_len = str(ann.as_path_length).zfill(3)
-            if(ann.received_from is None):
-               rec_from = str(3).zfill(3) 
-            else:
-               rec_from = str(ann.received_from).zfill(3)
-            # '-' serves similar purpose to padding, seperating parts
-            po = (str(ann.prefix) + '-' + str(ann.origin))
-            po = uuid.uuid3(uuid.NAMESPACE_DNS,po)
-            path_len_rec_from = int(path_len + rec_from)
-            #Named Tuples are adaptable to Postgres composite types
-            ann_tup = Announcement_tup(*(po,path_len_rec_from))
-            data.append(ann_tup)
+            path_len = ann.priority - int(ann.priority)
+            path_len = int(100*(1 - path_len))
+            path_len = str(path_len).zfill(3)
 
+            rec_from = int(ann.priority)
+            rec_from = str(rec_from).zfill(3)
+            # '-' serves similar purpose to padding, seperating parts
+            po = (str(ann.prefix) + '-' + str(ann.origin))
+
+            path_len_rec_from = int(path_len + rec_from)
+            #Named Tuples are adaptable to Postgres composite types
+            ann_tup = Announcement_tup(*(po,path_len_rec_from))
+            data.append(ann_tup)
         return data
 
     def append_no_dup(self, this_list, asn, l = None, r = None):

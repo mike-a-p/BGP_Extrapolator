@@ -1,5 +1,4 @@
 import psycopg2
-import psycopg2.extras
 import re
 from datetime import date
 from lib_bgp_data import Database
@@ -7,7 +6,6 @@ from progress_bar import progress_bar
 from named_tup import What_if_tup
 import random
 import sys
-#imports should be modified with file rearrangement
 
 class SQL_querier:
     def __init__(self,cursor_type = None):

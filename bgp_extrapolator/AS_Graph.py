@@ -1,11 +1,5 @@
 import sys
-import os
-import psutil
-import psycopg2
-import named_tup
 import time
-import gc
-from collections import deque
 from datetime import datetime
 from progress_bar import progress_bar
 from AS import AS
@@ -304,7 +298,6 @@ class AS_Graph:
         for asn in self.ases:
             AS = self.ases[asn]
             AS.clear_announcements()         
-           # gc.collect()
         return
     def append_no_dup(self, this_list, asn, l = None, r = None):
    
