@@ -6,6 +6,7 @@ The purpose of using a namedtuple rather than regular tuples or classes is to ea
 """
 
 
-Announcement_tup = namedtuple('Announcement','prefix_origin_hash path_len_and_rec_from')
+#Announcement_tup = namedtuple('Announcement','prefix_origin_hash path_len_and_rec_from')
+Announcement_tup = namedtuple('Announcement_2','prefix_origin_hash priority')
 What_if_tup = namedtuple('what_if_rates','rejection_rate false_positive_rate')
 Relationship = namedtuple('Relationship', 'primary_key cone_as customer_as provider_as peer_as_1 peer_as_2 source')

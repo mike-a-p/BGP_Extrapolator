@@ -141,22 +141,11 @@ class AS:
         for ann in self.all_anns:
             ann = self.all_anns[ann]
             
-            #path_len an rec_from are given 3 digits each
-            #padding ensures e.g. '33' + '0' is not mistaken for '3' + '30"
-            path_len = ann.priority - int(ann.priority)
-            if(path_len != 0):
-                path_len = 100*(1 - path_len)
-            path_len = int(path_len)
-            path_len = str(path_len).zfill(3)
-
-            rec_from = int(ann.priority)
-            rec_from = str(rec_from).zfill(3)
             # '-' serves similar purpose to padding, seperating parts
-            po = (str(ann.prefix) + '-' + str(ann.origin))
+            po = (ann.prefix + '-' + str(ann.origin))
 
-            path_len_rec_from = int(path_len + rec_from)
             #Named Tuples are adaptable to Postgres composite types
-            ann_tup = Announcement_tup(*(po,path_len_rec_from))
+            ann_tup = Announcement_tup(*(po,ann.priority))
             data.append(ann_tup)
         return data
 

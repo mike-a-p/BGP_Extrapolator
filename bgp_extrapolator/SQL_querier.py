@@ -95,11 +95,11 @@ class SQL_querier:
 
     def insert_results(self,asn, sql_anns):
         if(self.select_row(table_name = self.results_table_name,primary_key_name = 'asn',primary_key = asn)):
-            sql = ("""UPDATE """ + self.results_table_name + """ SET announcements = announcements||((%s)::announcement[])
+            sql = ("""UPDATE """ + self.results_table_name + """ SET announcements = announcements||((%s)::announcement_2[])
                     WHERE asn = (%s);""")
             data = (sql_anns,asn)
         else:
-            sql = """INSERT INTO """ + self.results_table_name + """ VALUES ((%s),(%s)::announcement[]);"""
+            sql = """INSERT INTO """ + self.results_table_name + """ VALUES ((%s),(%s)::announcement_2[]);"""
             data = (asn,sql_anns)
         try:
             self.database.execute(sql,data)
