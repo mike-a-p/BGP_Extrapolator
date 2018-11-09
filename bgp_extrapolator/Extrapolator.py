@@ -52,7 +52,7 @@ class extrapolator:
         self.graph.set_graph_table(table_name)
         return
 
-    def perform_propagation(self, max_total_anns = None,max_memory = None, test = False):
+    def perform_propagation(self, max_total_anns = None,iteration_size = None, test = False):
         """Performs announcement propagation and uploads results to database.
             :meth:`~insert_announcements()`\n 
             :meth:`~prop_anns_sent_to_peers_providers()`\n
@@ -72,10 +72,10 @@ class extrapolator:
             time.sleep(1)
             progress.update()
     
-        if(max_memory is None):
-            #MB
-            max_memory = 20000
-        max_group_anns = math.floor(max_memory/2.9)
+        if(iteration_size is None):
+            max_group_anns = 1000
+        else:
+            max_group_anns = iteration_size
        
         print("Ordering prefixes by frequency...") 
         prefix_counts = self.querier.count_prefix_amounts(self.ann_input_table_name)
@@ -97,7 +97,7 @@ class extrapolator:
 
             self.insert_announcements(prefixes_to_use)
 
-#            self.prop_anns_sent_to_peers_providers()
+            self.prop_anns_sent_to_peers_providers()
             self.propagate_up()
             start_down = time.time()
             self.propagate_down()
@@ -153,6 +153,24 @@ class extrapolator:
             for customer in source_as.customers:
                 self.graph.ases[customer].receive_announcements(anns_to_customers)
 
+        return
+    def prop_anns_sent_to_peers_providers(self):
+        """Send announcements known to be sent to a peer or provider of each AS to
+            the other peers and providers of each AS
+       
+
+        """
+        print("Propagating Announcements Sent to Peers/Providers...")
+        
+        for asn in self.ases_with_anns:
+            source_as = self.graph.ases[asn]
+            source_as.process_announcements()
+            anns_to_send = source_as.anns_sent_to_peers_providers
+            if(anns_to_send):
+                for peer in source_as.providers:
+                    self.graph.ases[peer].receveive_announcements(anns_to_send)
+                for provider in source_as.providers:
+                    self.graph.ases[provider].receveive_announcements(anns_to_send)
         return
 
     def propagate_up(self):
@@ -274,25 +292,6 @@ class extrapolator:
         self.ases_with_anns = list(set(self.ases_with_anns))
         return
 
-#TODO FIX this to not use prop_one
-    def prop_anns_sent_to_peers_providers(self):
-        """Send announcements known to be sent to a peer or provider of each AS to
-            the other peers and providers of each AS
-       
-
-        """
-        print("Propagating Announcements Sent to Peers/Providers...")
-        
-        #For all ASes with announcements ( list made in give_anns_to_as_path() )
-        for asn in self.ases_with_anns:
-            AS = self.graph.ases[asn]
-            AS.process_announcements()
-            #For all announcements received by an AS
-            for ann in AS.anns_sent_to_peers_providers:
-                ann = AS.anns_sent_to_peers_providers[ann]
-                self.prop_one_announcement(asn,ann,1, None)
-            return
-
     def insert_announcements(self,prefixes):
         """Begins announcement propagation
             
@@ -322,7 +321,6 @@ class extrapolator:
 
         for asn in self.graph.ases:
             AS = self.graph.ases[asn]
-        #    if asn == AS.SCC_id:
             sql_anns_arg = AS.anns_to_sql()
             self.querier.insert_results(asn,sql_anns_arg)
             progress.update()

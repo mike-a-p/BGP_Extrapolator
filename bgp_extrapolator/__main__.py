@@ -22,7 +22,7 @@ def main(args):
         extrap.graph.update()
 
     extrap.perform_propagation(max_total_anns = args['announcement_count'], 
-                                max_memory = args['announcement_memory'],
+                                iteration_size = args['iteration_size'],
                                 test = args['test'])
     
     if(not args['test']):
@@ -38,9 +38,9 @@ def parse_arguments():
                         help="run in test mode (doesn't save to database)")
     parser.add_argument("-a","--announcement_count",type=int,
                         help="specify the number of announcements to read from database and propagate")
-    parser.add_argument("-m","--announcement_memory",type=int,
-                        help="""specify the amount of memory announcements should take.
-                                 Breaks propagation into segments""")
+    parser.add_argument("-i","--iteration_size",type=int,
+                        help="""The amount of announcements that should be used in each sub-propagation.
+                                 Breaks propagation into segments. Helpful for memory mitigation.""")
 
     args = parser.parse_args()
     return vars(args)

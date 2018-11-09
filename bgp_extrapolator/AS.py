@@ -144,7 +144,9 @@ class AS:
             #path_len an rec_from are given 3 digits each
             #padding ensures e.g. '33' + '0' is not mistaken for '3' + '30"
             path_len = ann.priority - int(ann.priority)
-            path_len = int(100*(1 - path_len))
+            if(path_len != 0):
+                path_len = 100*(1 - path_len)
+            path_len = int(path_len)
             path_len = str(path_len).zfill(3)
 
             rec_from = int(ann.priority)

@@ -45,9 +45,9 @@ class SQL_querier:
     def select_row(self,table_name,primary_key_name = None,primary_key = None, customer_as = None ,provider_as = None):
         #Finds the row that contains the customer-provider
         #relationship between two ASes
-        if(asn):
+        if(primary_key):
             sql = "SELECT * FROM " + table_name + " WHERE "+ primary_key_name +" = (%s);"
-            data = (asn,)
+            data = (primary_key,)
         else:
             sql = "SELECT * FROM " + table_name + " WHERE customer_as = (%s) AND provider_as = (%s);"
             data = (customer_as,provider_as)
@@ -94,14 +94,18 @@ class SQL_querier:
         return prefix_amounts
 
     def insert_results(self,asn, sql_anns):
-        if(self.exists_row(table_name = self.results_table_name,primary_key_name = 'asn',primary_key = asn)):
+        if(self.select_row(table_name = self.results_table_name,primary_key_name = 'asn',primary_key = asn)):
             sql = ("""UPDATE """ + self.results_table_name + """ SET announcements = announcements||((%s)::announcement[])
                     WHERE asn = (%s);""")
             data = (sql_anns,asn)
         else:
             sql = """INSERT INTO """ + self.results_table_name + """ VALUES ((%s),(%s)::announcement[]);"""
             data = (asn,sql_anns)
-        self.database.execute(sql,data)
+        try:
+            self.database.execute(sql,data)
+        except psycopg2.DataError:
+            print("The following is not valid data:")
+            print(data)
         return
 
     def insert_as_graph_into_db(self,graph,graph_table_name):
