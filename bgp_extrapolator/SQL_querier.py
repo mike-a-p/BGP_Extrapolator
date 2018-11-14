@@ -1,4 +1,5 @@
 import psycopg2
+from psycopg2.extras import execute_values
 import re
 from datetime import date
 from lib_bgp_data import Database
@@ -14,6 +15,15 @@ class SQL_querier:
         else:
             self.database = Database(cursor_factory=psycopg2.extras.NamedTupleCursor)
         self.today = date.today()
+        
+        ###########################
+        #manual database connection
+        ###########################
+        self.conn = psycopg2.connect(host='localhost',
+                                database='bgp',
+                                user='bgp_user',
+                                password='Mta8Avm55zUCYtnDz')
+        self.cur = self.conn.cursor()
         return
 
     def set_results_table(self,table_name):
@@ -94,19 +104,61 @@ class SQL_querier:
         return prefix_amounts
 
     def insert_results(self,asn, sql_anns):
-        if(self.select_row(table_name = self.results_table_name,primary_key_name = 'asn',primary_key = asn)):
-            sql = ("""UPDATE """ + self.results_table_name + """ SET announcements = announcements||((%s)::announcement_2[])
-                    WHERE asn = (%s);""")
-            data = (sql_anns,asn)
-        else:
-            sql = """INSERT INTO """ + self.results_table_name + """ VALUES ((%s),(%s)::announcement_2[]);"""
-            data = (asn,sql_anns)
-        try:
-            self.database.execute(sql,data)
-        except psycopg2.DataError:
-            print("The following is not valid data:")
-            print(data)
+  #      if(self.select_row(table_name = self.results_table_name,primary_key_name = 'asn',primary_key = asn)):
+        sql = ("""UPDATE """ + self.results_table_name + """ SET announcements = announcements||((%s)::announcement_2[])
+               WHERE asn = (%s);""")
+        data = (sql_anns,asn)
+#        else:
+#            sql = """INSERT INTO """ + self.results_table_name + """ VALUES ((%s),(%s)::announcement_2[]);"""
+#            data = (asn,sql_anns)
+#        try:
+        self.database.execute(sql,data)
+#        except psycopg2.DataError:
+#            print("The following is not valid data:")
+#            print(data)
         return
+   
+    def insert_results_with_own_cursor(self,asn, sql_anns):
+        sql = ("""UPDATE """ + self.results_table_name + """ SET announcements = announcements||((%s)::announcement_2[])
+               WHERE asn = (%s);""")
+        data = (sql_anns,asn)
+        self.cur.execute(sql,data)
+        return
+
+    def initialize_results_keys(self,keys):
+        print("Initializing Result Table Keys...")
+        progress = progress_bar(len(keys))
+        for key in keys:
+            sql = """INSERT INTO """ + self.results_table_name + """ (asn) VALUES (%s);"""
+            data = (key,)
+            self.database.execute(sql,data)
+            progress.update()
+        progress.finish()
+        return
+
+    def insert_results_batch(self,anns_dict):
+        sql = """UPDATE """ + self.results_table_name + """ AS t SET announcements = t.announcements || c.announcements
+                FROM (VALUES
+                    (%s)
+                ) AS c(asn, announcements)
+                WHERE c.asn = t.asn;
+            """
+        data = str()
+        num_asns = len(anns_dict.keys())
+        i = 0
+        print("Making Insert Statement...")
+        progress = progress_bar(len(list(anns_dict.keys())))
+        for asn in anns_dict:
+            progress.update()
+            i+=1
+            anns = str(tuple(anns_dict[asn]))
+            if(i == num_asns):
+                data = data + "(" + str(asn) + ",ARRAY[" + anns + "]::announcement_2[])"
+            else:
+                data = data + "(" + str(asn) + ",ARRAY[" + anns + "]::announcement_2[]),"
+        progress.finish()
+        print("Inserting Results Batch...")
+        self.database.execute(sql,data)
 
     def insert_as_graph_into_db(self,graph,graph_table_name):
         print("Saving AS Graph to DB")

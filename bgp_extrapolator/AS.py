@@ -99,6 +99,11 @@ class AS:
         return
             
     def process_announcements(self):
+        """Iterates through incoming announcements obtained through
+            receive_announcements(), keeping only the best announcement.
+
+        """
+
         for prefix in self.incoming_announcements:
             anns = self.incoming_announcements[prefix]
             best_new = anns[0]
@@ -109,23 +114,46 @@ class AS:
             if(best_old is None or best_new.priority > best_old.priority):
                 self.all_anns[prefix] = best_new
         self.incoming_announcements = dict() 
+        return
 
     def clear_announcements(self):
-        #re-references all announcement collections to new dictionaries
+        """Re-references all announcement collections to new dictionaries.
+        
+        """
         self.all_anns = dict()
         self.incoming_announcements = dict()
         self.anns_sent_to_peers_providers = dict() 
         return
 
     def sent_to_peer_or_provider(self,announcement):
-        self.anns_sent_to_peers_providers[announcement.prefix + str(announcement.origin)] = announcement
-    
+        """Adds announcement to set of announcements sent to peers or providers.
+            Only those known to be sent this way in collected data are in this 
+            set. Announcements sent to peers or providers during extrapolation 
+            are not added.
+
+        Args:
+            announcement (:obj:`Announcement`): Announcement to append. 
+
+
+        """
+
+        self.anns_sent_to_peers_providers[announcement.prefix] = announcement
+        return
+
     def already_received(self,ann):
+        """Check if announcement was already received by this AS
+
+        Returns:
+            (:obj:`boolean`): True if rank was changed, False if not.
+
+        """
+
         if(ann.prefix in self.all_anns):
             return True
         else:
             return False
 
+    #TODO Remove if not called anymore for database inserts
     def anns_to_sql(self):
         """Converts all announcements received by this AS to a list of
             named tuples expected by Postgres.
@@ -134,8 +162,8 @@ class AS:
             (:obj:`list` of :obj:`Announcement_tup`): List of all announcements
                 received by this AS in format accepted by Postgres table.
 
-
         """
+
         data = list()
 
         for ann in self.all_anns:
@@ -149,6 +177,7 @@ class AS:
             data.append(ann_tup)
         return data
 
+    #TODO Remove, shouldn't be called from anywhere
     def append_no_dup(self, this_list, asn, l = None, r = None):
         """Maintains order of provided list. Inserts given asn to this_list if 
             binary search doesn't find asn.

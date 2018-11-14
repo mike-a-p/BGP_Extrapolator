@@ -20,14 +20,10 @@ def main(args):
         extrap.graph.load_graph_from_db()
     else:
         extrap.graph.update()
-
+    
     extrap.perform_propagation(max_total_anns = args['announcement_count'], 
                                 iteration_size = args['iteration_size'],
                                 test = args['test'])
-    
-    if(not args['test']):
-        extrap.graph.save_graph_to_db()        
-        extrap.save_anns_to_db()
 
 #TODO let -g argument take a date to load from
 def parse_arguments():
