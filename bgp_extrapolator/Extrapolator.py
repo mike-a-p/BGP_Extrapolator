@@ -7,7 +7,10 @@ May Require 'psycopg2'
 "pip3 install psycopg2"
 '''
 import sys
+import os
 import time
+import csv
+from datetime import datetime
 import math
 import multiprocessing as mp
 import named_tup
@@ -25,6 +28,8 @@ class extrapolator:
         self.querier = SQL_querier()
         self.graph = AS_Graph()
         self.ases_with_anns = list()
+        self.today = datetime.today().strftime('%Y_%m_%d')
+        self.results_counter = 0
         return
 
 
@@ -114,7 +119,14 @@ class extrapolator:
         #initialized.
         #Will be unused when database schema changes
 #        self.querier.initialize_results_keys(list(self.graph.ases.keys()))
-
+        if(not test):
+            try:
+                os.mkdir(self.today)
+                self.prefix_group_filename = "./" + self.today + "/prefix_grouping.txt"
+            except FileExistsError:
+                print("Directory", self.today, """already exists, consider removing 
+                    this directory or running with '-t' (--test) arg.""") 
+                
         start_time = time.time()
       
         #Default group size is 1000 for propagation
@@ -157,15 +169,14 @@ class extrapolator:
             self.propagate_up()
             start_down = time.time()
             self.propagate_down()
-
             #Save results of group, they will be removed from memory
             if(not test):
-                self.save_anns_to_db()
+                self.save_results(prefixes_to_use)
             self.graph.clear_announcements()
      
         #Save graph 
-        if(not test):
-            self.graph.save_graph_to_db()
+    #    if(not test):
+     #       self.graph.save_graph_to_db()
 
         end_time = time.time()
         print("Total Time To Extrapolate: " + str(end_time - start_time) + "s")
@@ -395,51 +406,35 @@ class extrapolator:
                     self.give_ann_to_as_path(ann.as_path, ann.prefix, ann.next_hop)
         return
 
-    def save_anns_to_db(self,workers = 1):
+    #TODO add option to overwrite results if directory already exists
+    def save_results(self,prefixes):
         print("Saving Propagation results to DB")
         start_time = time.time()
+        #append prefix group to prefix group file. Used to see which files contain which prefixes.
+        with open(self.prefix_group_filename,'a') as outfile:
+            prefix_group = list()
+            #prefixes from arg are 'records' from database.
+            for record in prefixes:
+                prefix_group.append(record.prefix)
+            prefix_group = ','.join(prefix_group)
+            outfile.write(str(self.results_counter) + " - " + prefix_group)
+            self.results_counter+=1
 
-        asn_list = list(self.graph.ases.keys())
-        graph_size = len(asn_list)
-
-        #each worker will get equal ASes except one will get the extas
-        job_size = math.floor(graph_size/workers)
-        processes = []
-        for i in range(workers):
-            #if it's the last worker, it gets the rest of the list
-            if(i == workers -1):
-                subjob = asn_list[job_size*i:]
-            else:
-                subjob = asn_list[job_size*i:job_size*(i+1)]
-#            self.save_anns_worker(subjob)
-#            t = mp.Process(target=self.save_anns_worker, args = (subjob,))
-#            processes.append(t)
-#            t.start()
-
-#        for p in processes:
-#            p.join()
-
-        end_time = time.time()
-        print("Time To Save Announcements: " + str(end_time - start_time) + "s")
-        return
-   
-
-    def save_anns_worker(self,subjob):
-        #give each worker their own database connection
-        worker_querier = SQL_querier()
-        worker_querier.set_results_table(self.querier.results_table_name)
-        anns_dict = dict()
-        progress = progress_bar(len(subjob))
-#        f = open("output.txt","a")
-        for asn in subjob:
-            progress.update()
-            AS = self.graph.ases[asn]
-#            anns_dict[asn] = AS.anns_to_sql()
-#            f.write(str(AS.anns_to_sql()))
-#            f.write("\n")
-            worker_querier.insert_results(asn,AS.anns_to_sql())
-    #        worker_querier.insert_results_with_own_cursor(asn,AS.anns_to_sql())
-        progress.finish()
-        
-        #worker_querier.insert_results_batch(anns_dict)
-        return
+        file_name = "./" + self.today + "/" + str(self.results_counter) + ".txt"
+        with open(file_name, 'a') as outfile:
+            asn_list = list(self.graph.ases.keys())
+            graph_size = len(asn_list)
+            progress = progress_bar(len(asn_list))
+            for asn in asn_list:
+                #identify section by asn
+                outfile.write(str(asn) + "\n\n")
+                outfile.write("prefix,origin,priority,received_from_asn\n")
+                for prefix in self.graph.ases[asn].all_anns:
+                    ann = self.graph.ases[asn].all_anns[prefix]
+                    outfile.write("%s,%s,%s,%s\n"%(ann.prefix,ann.origin,ann.priority,ann.received_from_asn))
+                outfile.write("\n\n")
+                progress.update()
+            progress.finish()
+            end_time = time.time()
+            print("Time To Save Announcements: " + str(end_time - start_time) + "s")
+        return 

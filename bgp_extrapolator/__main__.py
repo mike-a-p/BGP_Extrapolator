@@ -11,7 +11,7 @@ def main(args):
     extrap = extrapolator()
 
     extrap.set_ann_input_table(cparser['tables']['input'])
-    extrap.set_results_table(cparser['tables']['output'])
+#    extrap.set_results_table(cparser['tables']['output'])
     extrap.set_peers_table(cparser['tables']['peers'])
     extrap.set_customer_provider_table(cparser['tables']['customer_providers'])
     extrap.set_graph_table(cparser['tables']['graph'])
